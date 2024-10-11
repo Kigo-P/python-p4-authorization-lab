@@ -18,6 +18,24 @@ db.init_app(app)
 
 api = Api(app)
 
+# checking whether the user has been logged in
+@app.before_request
+def check_if_logged_in():
+    open_access_list = [
+        'clear',
+        'article_list',
+        'show_article',
+        'login',
+        'logout',
+        'check_session'
+    ]
+    if not session.get("user_id") and request.endpoint not in open_access_list:
+        #  creating and returning response based on the response body
+        response_body = {'error': 'Unauthorized'}
+        response = make_response(response_body, 401)
+        return response
+    pass
+
 class ClearSession(Resource):
 
     def delete(self):
@@ -84,15 +102,31 @@ class CheckSession(Resource):
         
         return {}, 401
 
+
+
 class MemberOnlyIndex(Resource):
     
     def get(self):
-        pass
+        #  querying and returning all articles that are member only
+        member_only_article = Article.query.filter(Article.is_member_only == True).all()
+        member_only_article_dict = [article.to_dict() for article in member_only_article ]
+        #  creating and returning response based on the article
+        response = make_response(member_only_article_dict, 200)
+        return response
 
 class MemberOnlyArticle(Resource):
     
     def get(self, id):
-        pass
+        user = session["user_id"]
+        if user:
+            # querying and filtering the article by the id
+            article = Article.query.filter_by(id= id).first()
+            # making a dictionary object of the article
+            article_dict = article.to_dict()
+            #  creating and returning response based on the article_dict
+            response = make_response(article_dict, 200)
+            return response
+
 
 api.add_resource(ClearSession, '/clear', endpoint='clear')
 api.add_resource(IndexArticle, '/articles', endpoint='article_list')
